@@ -1,4 +1,35 @@
-/* CSS Variables & Design Tokens (Placeholder) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  /* Color palette & theme tokens */
+  --bg-primary: #0A0D14;
+  --bg-secondary: #0F1420;
+  --bg-card: #131926;
+  --bg-card-hover: #172033;
+  --bg-input: #111724;
+  
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-focus: rgba(139, 92, 246, 0.5);
+  --border-card: #1E2738;
+  
+  --primary-purple: #8B5CF6;
+  --primary-purple-hover: #7C3AED;
+  --primary-purple-glow: rgba(139, 92, 246, 0.35);
+  
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dim: #64748B;
+  
+  --status-playing: #10B981;
+  --status-completed: #8B5CF6;
+  --status-backlog: #F59E0B;
+  --status-wishlist: #EC4899;
+  
+  --gold-star: #FBBF24;
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
