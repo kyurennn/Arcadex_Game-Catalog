@@ -25,26 +25,26 @@ export function formatPlaytime(hours) {
  */
 export function formatRating(rating) {
   if (rating === undefined || rating === null || isNaN(rating)) {
-    return '0.0';
+    return '0';
   }
-  return Number(rating).toFixed(1);
+  return String(Math.round(Number(rating)));
 }
 
 /**
- * Generates an array of star types ('full', 'half', 'empty') for precise UI rendering.
+ * Generates an array of star types ('full', 'empty') for solid integer rendering (1-5).
+ * Rounded to the nearest integer so there are no half stars (1/2).
  * @param {number} rating - Score between 0 and maxStars.
  * @param {number} maxStars - Default 5.
- * @returns {Array<'full' | 'half' | 'empty'>}
+ * @returns {Array<'full' | 'empty'>}
  */
 export function getStarArray(rating = 0, maxStars = 5) {
   const stars = [];
   const validRating = Math.max(0, Math.min(Number(rating) || 0, maxStars));
+  const roundedRating = Math.round(validRating);
 
   for (let i = 1; i <= maxStars; i++) {
-    if (validRating >= i) {
+    if (i <= roundedRating) {
       stars.push('full');
-    } else if (validRating >= i - 0.5) {
-      stars.push('half');
     } else {
       stars.push('empty');
     }
@@ -55,7 +55,7 @@ export function getStarArray(rating = 0, maxStars = 5) {
 
 /**
  * Returns a text string representation of star rating with score.
- * E.g., "★★★★½ (4.8)" or "★★★★★ (5.0)"
+ * E.g., "★★★★☆ (4)" or "★★★★★ (5)"
  * @param {number} rating - Rating score.
  * @param {number} maxStars - Default 5.
  * @returns {string}
@@ -63,11 +63,7 @@ export function getStarArray(rating = 0, maxStars = 5) {
 export function formatRatingStars(rating = 0, maxStars = 5) {
   const stars = getStarArray(rating, maxStars);
   const starIcons = stars
-    .map((type) => {
-      if (type === 'full') return '★';
-      if (type === 'half') return '½';
-      return '☆';
-    })
+    .map((type) => (type === 'full' ? '★' : '☆'))
     .join('');
 
   return `${starIcons} (${formatRating(rating)})`;
