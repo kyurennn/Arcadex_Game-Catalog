@@ -19,7 +19,8 @@ export default function GameCard({
   } = game;
 
   const displayImage = imageUrl || poster;
-  const stars = getStarArray(rating, 5);
+  const numericRating = Math.round(Number(rating) || 0);
+  const stars = getStarArray(numericRating, 5);
 
   return (
     <div
@@ -134,7 +135,7 @@ export default function GameCard({
           >
             {stars.map((type, idx) => (
               <span key={idx} style={{ lineHeight: 1 }}>
-                {type === 'full' ? '★' : type === 'half' ? '½' : '☆'}
+                {type === 'full' ? '★' : '☆'}
               </span>
             ))}
           </div>
@@ -146,7 +147,7 @@ export default function GameCard({
               color: '#64748B',
             }}
           >
-            {formatRating(rating)} / 5
+            {formatRating(numericRating)} / 5
           </span>
         </div>
       </div>

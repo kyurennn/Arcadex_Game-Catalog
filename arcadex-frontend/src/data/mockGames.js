@@ -97,55 +97,6 @@ export const initialGames = [
   }
 ];
 
-export const recommendedGames = [
-  {
-    id: 101,
-    title: 'Black Myth: Wukong',
-    genre: 'Action RPG',
-    platform: 'PC / PS5',
-    rating: 4.9,
-    matchPercentage: 98,
-    subBadge: 'Souls-like Fan',
-    recommendationReason: 'Karena Anda memainkan Elden Ring',
-    imageUrl: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2358720/header.jpg',
-    poster: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2358720/header.jpg'
-  },
-  {
-    id: 102,
-    title: 'Metaphor: ReFantazio',
-    genre: 'JRPG / Fantasy',
-    platform: 'PC / PS5',
-    rating: 4.8,
-    matchPercentage: 95,
-    subBadge: 'Persona Creator',
-    recommendationReason: "Karena Anda memainkan Baldur's Gate 3",
-    imageUrl: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2620600/header.jpg',
-    poster: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2620600/header.jpg'
-  },
-  {
-    id: 103,
-    title: 'Armored Core VI',
-    genre: 'Mecha / Action',
-    platform: 'PC / PS5',
-    rating: 4.7,
-    matchPercentage: 92,
-    subBadge: 'Fast-Paced Combat',
-    recommendationReason: 'Karena Anda memainkan Cyberpunk 2077',
-    imageUrl: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1888160/header.jpg',
-    poster: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1888160/header.jpg'
-  },
-  {
-    id: 104,
-    title: 'Ghost of Tsushima',
-    genre: 'Action / Open World',
-    platform: 'PC / PS5',
-    rating: 4.9,
-    matchPercentage: 89,
-    subBadge: 'Masterpiece',
-    recommendationReason: 'Karena Anda memainkan Helldivers 2',
-    imageUrl: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2215430/header.jpg',
-    poster: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/2215430/header.jpg'
-  }
-];
+export const recommendedGames = [];
 
 export default { initialGames, recommendedGames };

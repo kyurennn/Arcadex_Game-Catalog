@@ -1,4 +1,30 @@
-import React, { useState, useMemo } from 'react';
+/**
+ * =========================================================================================
+ * TUGAS PERKULIAHAN BAB 7 - AJAX DAN KONSUMSI API EKSTERNAL/MOCK
+ * =========================================================================================
+ * 
+ * 1. DOKUMENTASI ENDPOINT API (Instruksi 1 & 5):
+ *    - Endpoint Utama: https://api.rawg.io/api/games
+ *    - Parameter Query: ?key={RAWG_API_KEY}&page_size=8&search={searchQuery}
+ *    - Alasan Pemilihan:
+ *      RAWG Video Games Database API adalah database video game terbesar dan terbuka untuk
+ *      pengembang, menyediakan data game nyata lengkap (judul, poster, genre, platform, rating,
+ *      dan tanggal rilis). Endpoint ini gratis, mendukung CORS langsung dari browser, dan sangat
+ *      relevan dengan tema aplikasi katalog game "Arcadex".
+ *    - Endpoint Mock POST: https://jsonplaceholder.typicode.com/posts
+ *      Digunakan pada komponen GameFormModal untuk simulasi pengiriman data game baru via HTTP POST.
+ * 
+ * 2. PENERAPAN POLA ASINKRON LOADING, SUCCESS, DAN ERROR (Instruksi 2 & 5):
+ *    - Nama Fungsi Utama: `loadGames(query, forceError)`
+ *    - State Loading: `isLoading` (boolean) -> Mengatur tampilan LoadingSkeleton saat data diambil.
+ *    - State Error: `isError` (boolean) & `errorMessage` (string) -> Mengatur tampilan ErrorStateCard.
+ *    - State Success/Data: `games` (array) -> Menyimpan hasil response JSON yang telah dipetakan.
+ *    - Mekanisme Interaktivitas Error Recovery: Fungsi `handleRetry` memanggil kembali `loadGames()`
+ *      melalui tombol "Coba Lagi" saat request gagal.
+ * =========================================================================================
+ */
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from './components/navbar';
 import { HeroStats } from './components/hero';
 import { Toolbar } from './components/toolbar';
@@ -6,57 +32,80 @@ import { CatalogGrid } from './components/catalog';
 import { RecommendationSection } from './components/recommendations';
 import { GameFormModal } from './components/modal';
 import { Footer } from './components/footer';
-import { initialGames, recommendedGames } from './data/mockGames';
+import ApiStateUI from './components/common/ApiStateUI';
+import { fetchRawgGames } from './services/rawgApi';
 
 export default function App() {
-  const [games, setGames] = useState(initialGames);
+  // Task 7: Asynchronous API States
+  const [games, setGames] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Filter, Search, Sort & Modal States
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('rating-desc');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGame, setEditingGame] = useState(null);
 
-  // Keyboard shortcut listener for search (Ctrl+K or Cmd+K)
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        const searchInput = document.querySelector('input[type="text"]');
-        if (searchInput) searchInput.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+  /**
+   * Main asynchronous data fetcher for RAWG API (Task 7 Requirement)
+   * Handles:
+   * - Transition to Loading state (isLoading = true)
+   * - Transition to Success state (games = data, isLoading = false)
+   * - Transition to Error state (isError = true, errorMessage set)
+   */
+  const loadGames = useCallback(async (query = '') => {
+    setIsLoading(true);
+    setIsError(false);
+    setErrorMessage('');
+
+    try {
+      // Live async consumption from RAWG API
+      const liveGames = await fetchRawgGames(query, 1, 12);
+      setGames(liveGames);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('[Arcadex RAWG API Error]:', err);
+      setIsError(true);
+      setErrorMessage(err.message || 'Tidak dapat memuat data game.');
+      setIsLoading(false);
+    }
   }, []);
 
-  // Filter and Sort Processing
+  // Initial Data Fetch on Mount
+  useEffect(() => {
+    loadGames('');
+  }, [loadGames]);
+
+  // Debounced search query trigger for live RAWG API search
+  useEffect(() => {
+    // Avoid triggering on the very first render (handled by mount effect)
+    const timeoutHandler = setTimeout(() => {
+      loadGames(searchQuery);
+    }, 450);
+
+    return () => clearTimeout(timeoutHandler);
+  }, [searchQuery, loadGames]);
+
+  // Client-Side Status Filter & Sort on Fetched API Data
   const filteredAndSortedGames = useMemo(() => {
     return games
       .filter((game) => {
-        // Status filter
-        const matchesStatus =
-          activeFilter === 'All' || game.status.toLowerCase() === activeFilter.toLowerCase();
-
-        // Search query filter (matches title, genre, or platform)
-        const q = searchQuery.toLowerCase().trim();
-        const matchesQuery =
-          !q ||
-          game.title.toLowerCase().includes(q) ||
-          game.genre.toLowerCase().includes(q) ||
-          game.platform.toLowerCase().includes(q);
-
-        return matchesStatus && matchesQuery;
+        if (activeFilter === 'All') return true;
+        return game.status?.toLowerCase() === activeFilter.toLowerCase();
       })
       .sort((a, b) => {
         if (sortBy === 'rating-desc') return (b.rating || 0) - (a.rating || 0);
         if (sortBy === 'rating-asc') return (a.rating || 0) - (b.rating || 0);
-        if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+        if (sortBy === 'title-asc') return (a.title || '').localeCompare(b.title || '');
         if (sortBy === 'playtime-desc') return (b.playtime || 0) - (a.playtime || 0);
         return 0;
       });
-  }, [games, activeFilter, searchQuery, sortBy]);
+  }, [games, activeFilter, sortBy]);
 
-  // Handlers
+  // Modal Handlers
   const handleOpenAddModal = () => {
     setEditingGame(null);
     setIsModalOpen(true);
@@ -74,14 +123,12 @@ export default function App() {
 
   const handleFormSubmit = (gameData) => {
     if (editingGame && editingGame.id) {
-      // Update existing game
       setGames((prev) =>
         prev.map((item) =>
           item.id === editingGame.id ? { ...item, ...gameData, id: editingGame.id } : item
         )
       );
     } else {
-      // Add new game
       const newGame = {
         ...gameData,
         id: Date.now(),
@@ -102,13 +149,12 @@ export default function App() {
   };
 
   const handleQuickWishlistAdd = (recGame) => {
-    // Check if game already in catalog
     const exists = games.find(
       (g) => g.title.toLowerCase() === recGame.title.toLowerCase()
     );
 
     if (exists) {
-      alert(`"${recGame.title}" sudah ada di dalam katalog Anda (${exists.status}).`);
+      alert(`"${recGame.title}" sudah ada di dalam katalog (${exists.status}).`);
       return;
     }
 
@@ -126,6 +172,11 @@ export default function App() {
 
     setGames((prev) => [newWishlistGame, ...prev]);
     alert(`Berhasil menambahkan "${recGame.title}" ke Wishlist Anda!`);
+  };
+
+  // Task 7: "Coba Lagi" (Retry) Button Handler
+  const handleRetry = () => {
+    loadGames(searchQuery);
   };
 
   return (
@@ -148,7 +199,7 @@ export default function App() {
         onOpenModal={handleOpenAddModal}
       />
 
-      {/* Main App Content Area */}
+      {/* Main Container */}
       <main
         style={{
           flex: 1,
@@ -165,7 +216,7 @@ export default function App() {
           onSelectFilter={setActiveFilter}
         />
 
-        {/* 3. Toolbar (Heading, Cloud Status, Sort & View Controls) */}
+        {/* 3. Toolbar with Filter Title, Total Count & Sort Options */}
         <Toolbar
           title={activeFilter === 'All' ? 'All Catalog Games' : `${activeFilter} Games`}
           totalCount={filteredAndSortedGames.length}
@@ -173,95 +224,27 @@ export default function App() {
           onSortChange={setSortBy}
         />
 
-        {/* 4. Catalog Grid or Task 6 Empty State */}
-        {filteredAndSortedGames.length > 0 ? (
+        {/* 4. Task 7 Async API State Orchestrator (Loading, Error, Empty, and Success Grid) */}
+        <ApiStateUI
+          isLoading={isLoading}
+          isError={isError}
+          errorMessage={errorMessage}
+          onRetry={handleRetry}
+          isEmpty={filteredAndSortedGames.length === 0}
+          searchQuery={searchQuery}
+          activeFilter={activeFilter}
+          onReset={() => setSearchQuery('')}
+          onOpenModal={handleOpenAddModal}
+        >
           <CatalogGrid
             games={filteredAndSortedGames}
             onEdit={handleOpenEditModal}
             onDelete={handleDeleteGame}
           />
-        ) : (
-          <div
-            style={{
-              padding: '4rem 1.5rem',
-              margin: '1rem 0 3rem 0',
-              textAlign: 'center',
-              backgroundColor: '#0F1523',
-              border: '1px dashed #24324A',
-              borderRadius: '16px',
-            }}
-          >
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                margin: '0 auto 1.25rem auto',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(139, 92, 246, 0.12)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#A855F7',
-                fontSize: '1.75rem',
-              }}
-            >
-              🎮
-            </div>
+        </ApiStateUI>
 
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#FFFFFF', marginBottom: '0.45rem' }}>
-              Belum ada data game {activeFilter !== 'All' ? `(${activeFilter})` : ''}
-            </h3>
-
-            <p style={{ fontSize: '0.88rem', color: '#94A3B8', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
-              {searchQuery
-                ? `Tidak ditemukan game yang cocok dengan kata kunci "${searchQuery}". Coba kata kunci lain atau bersihkan pencarian.`
-                : `Belum ada game yang tersimpan dengan status ${activeFilter}. Anda dapat menambahkan game baru sekarang.`}
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    padding: '0.55rem 1.15rem',
-                    borderRadius: '8px',
-                    backgroundColor: '#162136',
-                    border: '1px solid #23324E',
-                    color: '#E2E8F0',
-                    fontSize: '0.84rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Reset Pencarian
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleOpenAddModal}
-                style={{
-                  padding: '0.55rem 1.25rem',
-                  borderRadius: '8px',
-                  backgroundColor: '#8B5CF6',
-                  backgroundImage: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '0.84rem',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 14px rgba(139, 92, 246, 0.45)',
-                  cursor: 'pointer',
-                }}
-              >
-                + Tambah Game Baru
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 5. Recommendation Section ("✦ Rekomendasi Untuk Anda") */}
+        {/* 5. Recommendation Section */}
         <RecommendationSection
-          recommendations={recommendedGames}
           onQuickWishlistAdd={handleQuickWishlistAdd}
         />
       </main>
@@ -269,7 +252,7 @@ export default function App() {
       {/* 6. Footer Component */}
       <Footer />
 
-      {/* 7. Modal Form (Add & Edit Game Dialog) */}
+      {/* 7. Modal Form (Add & Edit Game Dialog with simulated HTTP POST) */}
       <GameFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}

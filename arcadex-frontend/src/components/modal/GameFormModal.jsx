@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createGameMockPost } from '../../services/rawgApi';
 
 const defaultFormState = {
   title: '',
@@ -17,13 +18,15 @@ export default function GameFormModal({
   initialData = null,
 }) {
   const [formData, setFormData] = useState(defaultFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const isEditing = Boolean(initialData && initialData.id);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         title: initialData.title || '',
-        imageUrl: initialData.imageUrl || initialData.poster || '',
+        imageUrl: initialData.imageUrl || initialData.poster || initialData.coverImage || '',
         genre: initialData.genre || '',
         platform: initialData.platform || 'PC',
         status: initialData.status || 'Now Playing',
@@ -33,6 +36,7 @@ export default function GameFormModal({
     } else {
       setFormData(defaultFormState);
     }
+    setToastMessage('');
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
@@ -45,24 +49,49 @@ export default function GameFormModal({
     }));
   };
 
-  const handleSubmit = (e) => {
+  /**
+   * Task 7 POST Handler:
+   * Sends an asynchronous HTTP POST request to API (mock endpoint)
+   * satisfying Bab 7 requirement (Form sederhana yang mengirim data baru ke API menggunakan POST)
+   */
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
-    // Use a fallback game image if not provided
     const fallbackImage =
       'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80';
 
     const payload = {
       ...formData,
       imageUrl: formData.imageUrl.trim() || fallbackImage,
+      coverImage: formData.imageUrl.trim() || fallbackImage,
       poster: formData.imageUrl.trim() || fallbackImage,
       rating: Number(formData.rating) || 5.0,
       playtime: Number(formData.playtime) || 0,
     };
 
-    onSubmit(payload);
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      // Simulate API POST request for Task 7
+      await createGameMockPost(payload);
+      setToastMessage(
+        isEditing
+          ? 'Perubahan berhasil disimpan!'
+          : 'Berhasil dikirim ke API via HTTP POST (201 Created)!'
+      );
+
+      setTimeout(() => {
+        onSubmit(payload);
+        setIsSubmitting(false);
+        onClose();
+      }, 700);
+    } catch (err) {
+      console.warn('Gagal POST API, tetap menyimpan secara lokal:', err);
+      onSubmit(payload);
+      setIsSubmitting(false);
+      onClose();
+    }
   };
 
   return (
@@ -90,9 +119,31 @@ export default function GameFormModal({
           borderRadius: '16px',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 92, 246, 0.15)',
           overflow: 'hidden',
+          position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Toast Notification Banner */}
+        {toastMessage && (
+          <div
+            style={{
+              backgroundColor: '#10B981',
+              color: '#FFFFFF',
+              padding: '0.65rem 1rem',
+              fontSize: '0.84rem',
+              fontWeight: '600',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <span>✓</span>
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
         {/* Modal Header */}
         <div
           style={{
@@ -105,12 +156,12 @@ export default function GameFormModal({
         >
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#FFFFFF', margin: 0 }}>
-              {isEditing ? 'Edit Data Game' : 'Tambah Game Baru'}
+              {isEditing ? 'Edit Data Game' : 'Tambah Game Baru (HTTP POST)'}
             </h3>
             <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0.15rem 0 0 0' }}>
               {isEditing
                 ? 'Perbarui rincian informasi game dalam katalog Arcadex Anda'
-                : 'Lengkapi formulir untuk menambahkan game baru ke katalog Arcadex'}
+                : 'Kirim entri game baru ke API eksternal/mock secara asinkron (AJAX)'}
             </p>
           </div>
 
@@ -160,9 +211,10 @@ export default function GameFormModal({
                 name="title"
                 type="text"
                 required
-                placeholder="Contoh: Elden Ring: Shadow of the Erdtree"
+                placeholder="Contoh: The Witcher 3: Wild Hunt"
                 value={formData.title}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 style={{
                   width: '100%',
                   backgroundColor: '#131C2E',
@@ -185,15 +237,16 @@ export default function GameFormModal({
                 htmlFor="game-image"
                 style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#CBD5E1', marginBottom: '0.35rem' }}
               >
-                URL Poster / Gambar
+                URL Cover Image / Poster
               </label>
               <input
                 id="game-image"
                 name="imageUrl"
                 type="url"
-                placeholder="https://images.unsplash.com/photo-..."
+                placeholder="https://shared.cloudflare.steamstatic.com/..."
                 value={formData.imageUrl}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 style={{
                   width: '100%',
                   backgroundColor: '#131C2E',
@@ -225,6 +278,7 @@ export default function GameFormModal({
                   placeholder="Contoh: Action RPG"
                   value={formData.genre}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     backgroundColor: '#131C2E',
@@ -252,6 +306,7 @@ export default function GameFormModal({
                   name="platform"
                   value={formData.platform}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     backgroundColor: '#131C2E',
@@ -287,6 +342,7 @@ export default function GameFormModal({
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     backgroundColor: '#131C2E',
@@ -322,6 +378,7 @@ export default function GameFormModal({
                   step="0.1"
                   value={formData.rating}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     backgroundColor: '#131C2E',
@@ -350,6 +407,7 @@ export default function GameFormModal({
                   step="1"
                   value={formData.playtime}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     backgroundColor: '#131C2E',
@@ -380,6 +438,7 @@ export default function GameFormModal({
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               style={{
                 padding: '0.55rem 1.15rem',
                 borderRadius: '8px',
@@ -399,6 +458,7 @@ export default function GameFormModal({
 
             <button
               type="submit"
+              disabled={isSubmitting}
               style={{
                 padding: '0.55rem 1.35rem',
                 borderRadius: '8px',
@@ -408,19 +468,16 @@ export default function GameFormModal({
                 fontSize: '0.84rem',
                 fontWeight: '600',
                 boxShadow: '0 2px 12px rgba(139, 92, 246, 0.45)',
-                cursor: 'pointer',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                opacity: isSubmitting ? 0.7 : 1,
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.filter = 'brightness(1.1)';
-                e.currentTarget.style.boxShadow = '0 4px 18px rgba(139, 92, 246, 0.6)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.filter = 'brightness(1)';
-                e.currentTarget.style.boxShadow = '0 2px 12px rgba(139, 92, 246, 0.45)';
-              }}
             >
-              {isEditing ? 'Simpan Perubahan' : 'Tambah Game'}
+              {isSubmitting
+                ? 'Mengirim ke API...'
+                : isEditing
+                ? 'Simpan Perubahan'
+                : 'Tambah Game (POST)'}
             </button>
           </div>
         </form>
